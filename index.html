@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مشغّل">
+<title>مشغّل الموسيقى</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
+<style>
+:root{--bg:#f4f2fb;--surface:#ffffff;--line:#e2dff0;--text:#1c1633;--muted:#72698f;--accent:#3b4bf5;--on-accent:#fff;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#150f26;--surface:#201837;--line:#33294f;--text:#f1eeff;--muted:#a69dc4;--accent:#7f8bff;--on-accent:#150f26;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#150f26;--surface:#201837;--line:#33294f;--text:#f1eeff;--muted:#a69dc4;--accent:#7f8bff;--on-accent:#150f26;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px 16px 200px;max-width:560px;margin-inline:auto}
+h1{font-size:1.4rem;margin:6px 0 10px;font-weight:600}
+h2{font-size:1rem;margin:14px 0 6px;font-weight:600}
+button,.btn{font:inherit;cursor:pointer;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 13px}
+.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600;display:block;text-align:center;margin-bottom:10px}
+input[type=text],input[type=search]{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px}
+.tabs button{white-space:nowrap;border-radius:99px;padding:7px 14px}
+.tabs button.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.row{display:flex;gap:8px;margin:8px 0}
+ul{list-style:none;margin:8px 0 0;padding:0}
+li{display:flex;align-items:center;gap:6px;padding:10px 2px;border-bottom:1px solid var(--line)}
+li .name{flex:1;min-width:0;cursor:pointer}
+li .name b,li .name small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li .name b{font-weight:600}
+li .name small{color:var(--muted);font-size:.8rem}
+li.on .name b{color:var(--accent)}
+li button{background:none;border:0;padding:6px 9px;font-size:1.1rem;color:var(--muted)}
+li button.fav.on{color:#e5305a}
+.empty{color:var(--muted);text-align:center;padding:40px 8px;line-height:1.9}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--muted);line-height:1.8;font-size:.9rem}
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:5}
+#sheet.show{display:flex}
+#sheet .box{background:var(--surface);width:100%;max-width:560px;margin:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow:auto}
+#sheet .box button{display:block;width:100%;text-align:start;margin-top:8px}
+#player{position:fixed;inset:auto 0 0 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);z-index:4}
+#player .in{max-width:560px;margin:auto}
+.now{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.disc{width:44px;height:44px;border-radius:50%;flex:none;background:radial-gradient(circle,var(--surface) 0 7px,var(--accent) 8px 11px,var(--text) 12px 100%);opacity:.9}
+.disc.spin{animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.disc.spin{animation:none}}
+#title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.seek{direction:ltr;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.8rem}
+.seek input{flex:1;accent-color:var(--accent)}
+.ctl{direction:ltr;display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.ctl button{background:none;border:0;font-size:1.4rem;padding:6px 12px;color:var(--text)}
+.ctl .play{background:var(--accent);color:var(--on-accent);border-radius:50%;width:52px;height:52px;padding:0}
+.ctl .tog.on{color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<h1>مشغّل الموسيقى</h1>
+<div class="tabs" id="tabs"></div>
+<div id="view"></div>
+<div id="sheet"><div class="box" id="box"></div></div>
+
+<div id="player"><div class="in">
+  <div class="now"><div class="disc" id="disc"></div><div id="title">اختر أغنية للتشغيل</div></div>
+  <div class="seek"><span id="t1">0:00</span><input id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="موضع التشغيل"><span id="t2">0:00</span></div>
+  <div class="ctl">
+    <button class="tog" id="shuf" aria-label="عشوائي">🔀</button>
+    <button id="prev" aria-label="السابق">⏮</button>
+    <button class="play" id="pp" aria-label="تشغيل">▶</button>
+    <button id="next" aria-label="التالي">⏭</button>
+    <button class="tog" id="rep" aria-label="تكرار">🔁</button>
+  </div>
+</div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const APP='MyPlayer',API='https://api.audius.co/v1';
+const audio=new Audio();audio.preload='metadata';audio.setAttribute('playsinline','');
+let lib=[],lists=[],plays={t:{},a:{}},queue=[],qi=-1,shuffle=false,repeat=false,curURL=null,db=null;
+let tab='lib',filter='',openList=null,sQ='',sRes=[],sMsg='',recs=null;
+const TABS=[['lib','المكتبة'],['search','بحث'],['lists','قوائمي'],['favs','المفضلة'],['queue','التالي'],['recs','ترشيحات']];
+
+/* storage */
+function openDB(){return new Promise(res=>{try{const r=indexedDB.open('tunes',2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('t'))d.createObjectStore('t',{keyPath:'id'});if(!d.objectStoreNames.contains('m'))d.createObjectStore('m',{keyPath:'k'})};r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
+function dbAll(s){return new Promise(res=>{if(!db)return res([]);try{const r=db.transaction(s).objectStore(s).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([])}catch(e){res([])}})}
+function dbPut(s,o){try{if(db)db.transaction(s,'readwrite').objectStore(s).put(o)}catch(e){}}
+function dbDel(s,k){try{if(db)db.transaction(s,'readwrite').objectStore(s).delete(k)}catch(e){}}
+const saveMeta=()=>{dbPut('m',{k:'lists',v:lists});dbPut('m',{k:'plays',v:plays})};
+
+/* helpers */
+const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const el=(tag,props,...kids)=>{const e=Object.assign(document.createElement(tag),props||{});e.append(...kids);return e};
+const inLib=t=>lib.find(x=>x.id===t.id);
+const isFav=t=>{const x=inLib(t);return !!(x&&x.fav)};
+function ensureLib(t){let x=inLib(t);if(!x){x={id:t.id,name:t.name,artist:t.artist||'',src:t.src,aid:t.aid,url:t.url,blob:t.blob};lib.push(x);dbPut('t',x)}return x}
+function toggleFav(t){const x=ensureLib(t);x.fav=!x.fav;dbPut('t',x);render()}
+function trackSrc(t){if(t.blob){curURL=URL.createObjectURL(t.blob);return curURL}return t.src==='audius'?`${API}/tracks/${t.aid}/stream?app_name=${APP}`:t.url}
+
+/* playback */
+function play(list,i){queue=list.slice();qi=i;start()}
+function start(){
+  const t=queue[qi];if(!t)return;
+  if(curURL){URL.revokeObjectURL(curURL);curURL=null}
+  audio.src=trackSrc(t);audio.play().catch(()=>{});
+  plays.t[t.id]=(plays.t[t.id]||0)+1;
+  if(t.artist)plays.a[t.artist]=(plays.a[t.artist]||0)+1;
+  saveMeta();recs=null;
+  $('#title').textContent=t.artist?`${t.name} - ${t.artist}`:t.name;
+  try{navigator.mediaSession.metadata=new MediaMetadata({title:t.name,artist:t.artist||'مشغّل الموسيقى'})}catch(e){}
+  render();
+}
+function next(){
+  if(!queue.length)return;
+  if(shuffle&&queue.length>1){let r;do{r=Math.floor(Math.random()*queue.length)}while(r===qi);qi=r}
+  else if(qi<queue.length-1)qi++;
+  else if(repeat)qi=0;
+  else{audio.pause();return}
+  start();
+}
+function prev(){if(audio.currentTime>3||qi<=0){audio.currentTime=0;return}qi--;start()}
+function toggle(){if(qi<0)return;audio.paused?audio.play().catch(()=>{}):audio.pause()}
+function playNext(t){if(qi<0){play([t],0);return}queue.splice(qi+1,0,t);render()}
+
+/* sheet */
+function openSheet(t){
+  const b=$('#box');b.innerHTML='';
+  b.append(el('b',{textContent:t.name}));
+  b.append(el('button',{textContent:'⏭ شغّلها بعد الأغنية الحالية',onclick:()=>{playNext(t);closeSheet()}}));
+  b.append(el('h2',{textContent:'إضافة إلى قائمة تشغيل'}));
+  lists.forEach(l=>b.append(el('button',{textContent:'🎵 '+l.name,onclick:()=>{ensureLib(t);if(!l.ids.includes(t.id))l.ids.push(t.id);saveMeta();closeSheet();render()}})));
+  const inp=el('input',{type:'text',placeholder:'اسم قائمة جديدة'});
+  b.append(el('div',{className:'row'},inp,el('button',{textContent:'إنشاء',onclick:()=>{const n=inp.value.trim();if(!n)return;ensureLib(t);lists.push({id:'l'+Date.now(),name:n,ids:[t.id]});saveMeta();closeSheet();render()}})));
+  if(inLib(t))b.append(el('button',{textContent:'🗑 حذف من المكتبة',onclick:()=>{removeTrack(t);closeSheet()}}));
+  b.append(el('button',{textContent:'إغلاق',onclick:closeSheet}));
+  $('#sheet').classList.add('show');
+}
+function closeSheet(){$('#sheet').classList.remove('show')}
+$('#sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet()};
+function removeTrack(t){
+  lib=lib.filter(x=>x.id!==t.id);dbDel('t',t.id);
+  lists.forEach(l=>l.ids=l.ids.filter(i=>i!==t.id));saveMeta();
+  if(queue[qi]&&queue[qi].id===t.id){audio.pause();audio.removeAttribute('src');queue=[];qi=-1;$('#title').textContent='اختر أغنية للتشغيل'}
+  render();
+}
+
+/* online (Audius) */
+async function audiusSearch(q,limit=20){
+  const r=await fetch(`${API}/tracks/search?query=${encodeURIComponent(q)}&limit=${limit}&app_name=${APP}`);
+  if(!r.ok)throw new Error('http');
+  const j=await r.json();
+  return (j.data||[]).map(d=>({id:'a'+d.id,aid:d.id,name:d.title,artist:(d.user&&d.user.name)||'',src:'audius'}));
+}
+async function doSearch(){
+  sQ=$('#sq').value.trim();if(!sQ)return;
+  sMsg='جارٍ البحث…';sRes=[];render();
+  try{sRes=await audiusSearch(sQ);sMsg=sRes.length?'':'مفيش نتايج. جرّب اسم تاني.'}
+  catch(e){sMsg='البحث الأونلاين مش شغال في النسخة دي. لازم الملف يتفتح من موقع تاني (زي GitHub Pages أو Netlify) أو يكون النت واصل.'}
+  render();
+}
+async function loadRecs(){
+  const top=Object.entries(plays.a).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
+  if(!top.length){recs={msg:'اسمع كام أغنية الأول، وأنا أرشحلك حاجات شبه اللي بتسمعها.',local:[],online:[]};return render()}
+  const local=lib.filter(t=>top.includes(t.artist)).sort((a,b)=>(plays.t[a.id]||0)-(plays.t[b.id]||0)).slice(0,15);
+  recs={msg:'حسب سماعك: '+top.join('، '),local,online:null};render();
+  try{
+    const out=[];
+    for(const a of top.slice(0,2)){(await audiusSearch(a,10)).forEach(t=>{if(!inLib(t)&&!out.find(o=>o.id===t.id))out.push(t)})}
+    recs.online=out;
+  }catch(e){recs.online=[]}
+  render();
+}
+
+/* rendering */
+function row(t,list,i){
+  const cur=queue[qi]&&queue[qi].id===t.id;
+  const n=el('div',{className:'name',onclick:()=>play(list,i)},el('b',{textContent:t.name}),el('small',{textContent:t.artist||(t.src==='audius'?'Audius':'ملف محلي')}));
+  const f=el('button',{className:'fav'+(isFav(t)?' on':''),textContent:isFav(t)?'♥':'♡',onclick:()=>toggleFav(t)});f.setAttribute('aria-label','مفضلة');
+  const m=el('button',{textContent:'⋯',onclick:()=>openSheet(t)});m.setAttribute('aria-label','المزيد');
+  return el('li',{className:cur?'on':''},n,f,m);
+}
+function listOf(arr,empty){
+  const ul=el('ul');
+  if(!arr.length){return el('div',{className:'empty',innerHTML:empty})}
+  arr.forEach((t,i)=>ul.append(row(t,arr,i)));return ul;
+}
+function playAll(arr){return el('button',{className:'primary',textContent:'▶ تشغيل الكل',onclick:()=>arr.length&&play(arr,0)})}
+
+function render(){
+  const tb=$('#tabs');tb.innerHTML='';
+  TABS.forEach(([k,n])=>tb.append(el('button',{className:tab===k?'on':'',textContent:n,onclick:()=>{tab=k;openList=null;render();if(k==='recs'&&!recs)loadRecs()}})));
+  const v=$('#view');v.innerHTML='';
+  if(tab==='lib'){
+    const fi=el('input',{type:'file',accept:'audio/*',multiple:true,hidden:true,onchange:e=>{for(const f of e.target.files){const t={id:'f'+Date.now()+Math.random(),name:f.name.replace(/\.[^.]+$/,''),artist:'',src:'local',blob:f};lib.push(t);dbPut('t',t)}e.target.value='';render()}});
+    v.append(el('label',{className:'btn primary'},'إضافة ملفات صوت من الجهاز',fi));
+    const q=el('input',{type:'search',placeholder:'بحث في المكتبة',value:filter,oninput:e=>{filter=e.target.value;renderList()}});v.append(q);
+    v.append(el('div',{id:'libList'}));renderList();
+  }else if(tab==='search'){
+    const inp=el('input',{type:'search',id:'sq',placeholder:'اسم المطرب أو الأغنية',value:sQ,onkeydown:e=>{if(e.key==='Enter')doSearch()}});
+    v.append(el('div',{className:'row'},inp,el('button',{textContent:'بحث',onclick:doSearch})));
+    if(sMsg)v.append(el('div',{className:'note',textContent:sMsg}));
+    if(sRes.length){v.append(listOf(sRes,''))}
+    else if(!sMsg)v.append(el('div',{className:'empty',textContent:'ابحث عن أي مطرب أو أغنية. النتائج من كتالوج Audius المفتوح.'}));
+  }else if(tab==='lists'){
+    if(openList){
+      const l=lists.find(x=>x.id===openList);if(!l){openList=null;return render()}
+      const arr=l.ids.map(id=>lib.find(t=>t.id===id)).filter(Boolean);
+      v.append(el('div',{className:'row'},el('button',{textContent:'→ رجوع',onclick:()=>{openList=null;render()}}),el('button',{textContent:'🗑 حذف القائمة',onclick:()=>{lists=lists.filter(x=>x.id!==l.id);saveMeta();openList=null;render()}})));
+      v.append(el('h2',{textContent:l.name}));v.append(playAll(arr));
+      v.append(listOf(arr,'القائمة فاضية. من أي أغنية اضغط ⋯ وأضفها هنا.'));
+    }else{
+      const inp=el('input',{type:'text',placeholder:'اسم قائمة جديدة'});
+      v.append(el('div',{className:'row'},inp,el('button',{textContent:'إنشاء',onclick:()=>{const n=inp.value.trim();if(!n)return;lists.push({id:'l'+Date.now(),name:n,ids:[]});saveMeta();render()}})));
+      if(!lists.length)v.append(el('div',{className:'empty',textContent:'لسه معندكش قوائم تشغيل.'}));
+      const ul=el('ul');lists.forEach(l=>ul.append(el('li',{},el('div',{className:'name',onclick:()=>{openList=l.id;render()}},el('b',{textContent:l.name}),el('small',{textContent:l.ids.length+' أغنية'})))));v.append(ul);
+    }
+  }else if(tab==='favs'){
+    const arr=lib.filter(t=>t.fav);if(arr.length)v.append(playAll(arr));
+    v.append(listOf(arr,'مفيش مفضلة لسه. اضغط ♡ جنب أي أغنية.'));
+  }else if(tab==='queue'){
+    if(qi<0){v.append(el('div',{className:'empty',textContent:'مفيش حاجة بتتشغل دلوقتي.'}))}
+    else{
+      v.append(el('h2',{textContent:'بتتشغل دلوقتي'}));v.append(el('ul',{},row(queue[qi],queue,qi)));
+      v.append(el('h2',{textContent:'الجاي'}));
+      const ul=el('ul');queue.slice(qi+1).forEach((t,k)=>ul.append(row(t,queue,qi+1+k)));
+      v.append(ul.children.length?ul:el('div',{className:'empty',textContent:'مفيش أغاني تانية في الطابور.'}));
+    }
+  }else if(tab==='recs'){
+    if(!recs){v.append(el('div',{className:'empty',textContent:'جارٍ التحضير…'}));return}
+    v.append(el('div',{className:'note',textContent:recs.msg}));
+    if(recs.local.length){v.append(el('h2',{textContent:'من مكتبتك'}));v.append(listOf(recs.local,''))}
+    if(recs.online===null)v.append(el('div',{className:'empty',textContent:'بدوّر على ترشيحات أونلاين…'}));
+    else if(recs.online.length){v.append(el('h2',{textContent:'اكتشف أغاني جديدة'}));v.append(listOf(recs.online,''))}
+  }
+}
+function renderList(){
+  const box=$('#libList');if(!box)return;box.innerHTML='';
+  const f=filter.trim().toLowerCase();
+  const arr=lib.filter(t=>!f||(t.name+' '+(t.artist||'')).toLowerCase().includes(f));
+  if(arr.length)box.append(playAll(arr));
+  box.append(listOf(arr,lib.length?'مفيش نتايج للبحث ده.':'المكتبة فاضية.<br>أضف ملفات من جهازك، أو ابحث أونلاين وأضف أغاني من تبويب «بحث».'));
+}
+
+/* controls */
+$('#pp').onclick=toggle;$('#next').onclick=next;$('#prev').onclick=prev;
+$('#shuf').onclick=e=>{shuffle=!shuffle;e.currentTarget.classList.toggle('on',shuffle)};
+$('#rep').onclick=e=>{repeat=!repeat;e.currentTarget.classList.toggle('on',repeat)};
+$('#seek').oninput=e=>{if(isFinite(audio.duration))audio.currentTime=audio.duration*e.target.value/100};
+audio.onplay=()=>{$('#pp').textContent='⏸';$('#disc').classList.add('spin');try{navigator.mediaSession.playbackState='playing'}catch(e){}};
+audio.onpause=()=>{$('#pp').textContent='▶';$('#disc').classList.remove('spin');try{navigator.mediaSession.playbackState='paused'}catch(e){}};
+audio.ontimeupdate=()=>{$('#t1').textContent=fmt(audio.currentTime);$('#t2').textContent=fmt(audio.duration);if(isFinite(audio.duration))$('#seek').value=audio.currentTime/audio.duration*100};
+audio.onended=next;
+audio.onerror=()=>{if(qi>=0)$('#title').textContent='تعذّر تشغيل الملف ده'};
+try{[['play',toggle],['pause',toggle],['previoustrack',prev],['nexttrack',next],['seekto',d=>{audio.currentTime=d.seekTime}]].forEach(([a,f])=>navigator.mediaSession.setActionHandler(a,f))}catch(e){}
+
+(async()=>{
+  db=await openDB();
+  lib=(await dbAll('t')).map(t=>({artist:'',src:t.blob?'local':(t.src||'url'),...t}));
+  (await dbAll('m')).forEach(m=>{if(m.k==='lists')lists=m.v||[];if(m.k==='plays')plays=m.v||plays});
+  render();
+})();
+</script>
+</body>
+</html>
